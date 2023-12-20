@@ -2,22 +2,24 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs')
+const cors = require('cors');
 const fileUpload = require('express-fileupload');
 const { Client } = require('smb2');
 const rimraf = require('rimraf');
 const fsExtra = require('fs-extra');
 const { execSync } = require('child_process');
 
-/* const app = express(); */
 
 const router = express.Router();
+
 
 //metodo multer.storage.diskStorage
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
       
-    let uploadPath = 'C:/Users/Practicante 2/Downloads/';
+    //let uploadPath = 'C:/Users/Practicante 2/Downloads/';
+    let uploadPath = 'C:/Clientes-proveedores/';
     const date = new Date();
     const year = date.getFullYear();
     const month = date.getMonth() + 1; // Los meses son de 0 a 11
@@ -37,6 +39,8 @@ const storage = multer.diskStorage({
 });
 
 /* const upload = multer({ storage: storage }); */
+
+const nameX = null;
 
 const upload = multer({ dest: 'uploads/' });
 router.post('/', upload.fields([
@@ -67,6 +71,9 @@ router.post('/', upload.fields([
   { name: 'Ef' },
   { name: 'Certban' },
   { name: 'Refcom' },
+  { name: 'Refcom2' },
+  { name: 'Refcom3' },
+  { name: 'Refcom4' },
   { name: 'Cvbo' },
   { name: 'Firdoc' },
   { name: 'Infemp' },
@@ -74,10 +81,46 @@ router.post('/', upload.fields([
   { name: 'Otros'},
   { name: 'ValAnt'},
 ]), async (req, res) => {
-  const folderName = req.body.folderName; 
+  const folderName = req.body.folderName;
+  const originalFolderName = req.body.originalFolderName;
+  /* const folderPath=null */
+  if(folderName !== originalFolderName){
+    
+    // Ruta de la carpeta de origen
+    const carpetaOrigen = `C:/Clientes-Proveedores/${originalFolderName}`;
+    
+    // Ruta de la carpeta de destino
+    const carpetaDestino = `C:/Clientes-Proveedores/${folderName}`;
+    /* const nombreArchivos =  */
+    const archivosLocales = fsExtra.readdirSync(carpetaOrigen);
 
-  const folderPath = path.join(`C:/Users/Practicante 2/Downloads/${folderName}`);
- 
+  archivosLocales.forEach((archivo) => {
+    const rutaLocal = path.join(carpetaOrigen, archivo);
+    const rutaRemotaArchivo = path.join(carpetaDestino, archivo);
+    fsExtra.copySync(rutaLocal, rutaRemotaArchivo);
+
+    /* changing names of files */
+    const palabraABorrar  = req.body.originalClientName;
+    const palabraReemplazo  = req.body.clientName;
+    const extension = path.extname(archivo);
+    const nombreBase  = path.basename(archivo);
+    const nuevoNombre = nombreBase.replace(palabraABorrar,palabraReemplazo);
+    const rutaOriginal = path.join(carpetaDestino,archivo);
+    const rutaNueva = path.join(carpetaDestino,nuevoNombre+extension);
+    fs.rename(rutaOriginal,rutaNueva,(err)=>{
+      if (err) {
+        console.error('Error al renombrar el archivo:', err);
+      } else {
+        console.log(`Archivo renombrado: ${nombreBase} => ${nuevoNombre}`);
+      }
+    })
+
+  });
+  console.log('Archivos copiados exitosamente.');
+  }
+  const folderPath = path.join(`C:/Clientes-Proveedores/${folderName}`);
+  //const folderPath = path.join(`C:/Users/Practicante 2/Downloads/${folderName}`);
+
 /* const folderPath = path.join(`smb${folderName}`);
  */if (!fs.existsSync(folderPath)) {
     fs.mkdirSync(folderPath);
@@ -106,7 +149,9 @@ router.post('/', upload.fields([
 
   // Crear la carpeta remota en el recurso compartido
   try {
-    execSync(`mkdir "${rutaRemota}"`);
+    if(!fs.existsSync(rutaRemota)){
+      execSync(`mkdir "${rutaRemota}"`);
+    }
   } catch (error) {
     console.error('Error al crear la carpeta remota:', error.message);
     process.exit(1);
@@ -128,25 +173,6 @@ router.post('/', upload.fields([
   });
 
   console.log('Carpeta enviada correctamente.');
-
-  /* const archivosEnRecursoCompartido = fs.readdirSync(rutaRecursoCompartido);
-  console.log('Archivos en el recurso compartido:', archivosEnRecursoCompartido);
-  const contenidoLeido = fs.readFileSync(rutaRemota, 'utf-8');
-  console.log('Contenido del archivo en el recurso compartido:', contenidoLeido); */
-  /* try {
-    execSync(`copy "${folderPath}" "${rutaRemota}"`);
-    console.log('Archivo enviado correctamente.');
-  } catch (error) {
-    console.error('Error al enviar el archivo:', error.message);
-  } */
-  /* try to conecto to samba */
-  /* const client = new Client({
-    share: 'smb://appterceros:L4ng0K3nsh1@192.168.4.237/aplicativoterceros',
-    domain: null, // Puede ser null o omitido si no se requiere autenticación
-    username: appterceros,
-    password: L4ng0K3nsh1,
-  });
-  await client.up */
 });
 
 
@@ -166,5 +192,58 @@ router.delete('/:folderName', (req,res)=>{
       return res.status(500).send('Error al eliminar la carpeta');
     }
 });
+
+const carpetaCompartida = '\\\\192.168.4.237\\aplicativoterceros\\87877767-COMFENALCO';
+
+router.get('/obtener-archivo/:carpeta/:archivo', (req, res) => {
+  const { carpeta, archivo } = req.params;
+  const rutaArchivo = path.join('\\\\192.168.4.237\\aplicativoterceros\\', carpeta, archivo);
+  res.sendFile(rutaArchivo);
+});
+
+/* router.get('/archivo/:nombreArchivo',(req,res)=>{
+  const { nombreArchivo } = req.params;
+  const folderName = req.body.folderName;
+  const rutaArchivo = path.join(`${carpetaCompartida}`, nombreArchivo);
+  try{
+    res.sendFile(rutaArchivo);
+  }catch (error){
+    console.log('Error no hay ningun archivo con este nombre',error)
+  }
+}) */
+
+/* const carpetaCompartida = '\\\\192.168.4.237\\aplicativoterceros\\1006101631-ORDOÑEZ-MARIN-FELIPE-JOSE'; // Reemplaza con la ruta de tu carpeta compartida
+router.get('/archivos',express.static(carpetaCompartida));
+ */
+
+
+/* app.use('/archivos',express.static(carpetaCompartida)) */
+/* get the files in the ftp */
+/* const arr = express.static();
+arr.get('archivos',('\\\\192.168.4.237\\aplicativoterceros\\1006101631-ORDOÑEZ-MARIN-FELIPE-EMANUEL')) */
+/* router.use('/archivos', express.static(carpetaCompartida));
+ *//* router.use('/archivo',(req,res)=>{
+  const folderName = req.body.folderName;
+  const carpetaCompartida = `\\\\192.168.4.237\\aplicativoterceros\\${folderName}`; // Reemplaza con la ruta de tu carpeta compartida
+  express.static(carpetaCompartida)
+
+}) */
+
+
+router.get('/archivos/compartidos',(req,res)=>{
+  const folderName = req.params.folderName; 
+  const rutaRecursoCompartido = '\\192.168.4.237\aplicativoterceros';
+
+  // Ruta remota en el recurso compartido donde deseas guardar la carpeta
+  const rutaRemota = `${rutaRecursoCompartido}\\${folderName}`;
+  fsExtra.readdir(rutaRemota, (err, files) => {
+    if (err) {
+      console.error('Error al obtener archivos:', err);
+      return;
+    }
+
+    console.log('Archivos en la carpeta compartida:', files);
+  });
+})
 
 module.exports=router

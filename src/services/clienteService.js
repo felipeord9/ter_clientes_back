@@ -4,18 +4,47 @@ const find=()=>{
     const Clientes = models.Clientes.findAll()
     return Clientes
 };
-
+const findOne = async (id) => {
+    const cliente = await models.Clientes.findByPk(id)
+  
+    if(!cliente) throw boom.notFound('Cliente no encontrado')
+  
+    return cliente
+  }
 const create = async(body)=>{
     const newCliente = await models.Clientes.create(body)
     return newCliente    
 }
 
-const findOne = async (id) => {
-    const Cliente = await models.Clientes.findByPk(id)
+const findCliente = async (id)=>{
+    const client = await models.Clientes.findByPk(id)
+    if(!client) throw boom.notFound('Error')
+    return client
+}
+
+const findByCedula = async (cedula) => {
+    const cliente = await models.Clientes.findOne({
+     where: {cedula }
+  })
   
-    if(!Cliente) throw boom.notFound('Tercero no encontrado')
+    if(!cliente) throw boom.notFound('Cliente no encontrado')
   
-    return Cliente
+    return cliente
+  }
+
+const update = async (id, changes) => {
+    const cliente = await findOne(id)
+    const updatedCliente = await cliente.update(changes)
+  
+    return updatedCliente
+}
+
+const validarCliente = async (cedula)=>{
+    const cliente = await models.Clientes.findOne({
+        where:{cedula:cedula}
+    })
+    if(!cliente) throw boom.notFound('Cliente no encontrado')
+    return cliente
 }
 
 const remove = async(id)=>{
@@ -30,10 +59,19 @@ const remove = async(id)=>{
  */    /* models.Clientes.destroy(id)
     models.Clientes.sequelize.query(`DELETE FROM clientes_id WHERE ${cliente.id}`) */
 }
-
+const removeByCedula = async(cedula)=>{
+    const cliente = await findByCedula(cedula)
+    await cliente.destroy(cedula)
+    return cedula
+}
 module.exports={
     find,
     create,
     findOne,
-    remove
+    remove,
+    validarCliente,
+    update,
+    findCliente,
+    removeByCedula,
+
 }

@@ -51,6 +51,8 @@ const createProveedor = async (req,res,next)=>{
             docCrepL:body.docCrepL,
             docEf:body.docEf,
             docRefcom:body.docRefcom,
+            docRefcom2:body.docRefcom2,
+            docRefcom3:body.docRefcom3,
             docInfemp:body.docInfemp,
             docInfrl:body.docInfrl,
             docCerBan: body.docCerBan,
@@ -69,7 +71,19 @@ const createProveedor = async (req,res,next)=>{
         next(error)
     }
 }
-
+const updateProveedor = async (req, res, next) => {
+    try {
+      const { params: { id }, body } = req
+      const data = await ProveedorService.update(id, body)
+  
+      res.json(200).json({
+        message: 'Updated',
+        data
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
 const findOneProveedor = async (req, res, next) => {
     try {
       const { params: { id } } = req;
@@ -84,6 +98,20 @@ const findOneProveedor = async (req, res, next) => {
     }
   };
 
+  const validar = async (req,res,next)=>{
+    try{
+        const{params:{cedula}}=req;
+        const data = await ProveedorService.validarProveedor(cedula);
+
+        res.status(200).json({
+            message: 'OK',
+            data
+          })
+        } catch (error) {
+          next(error)
+        }
+  }
+
 const deleteProveedor = async(req,res,next)=>{
     try{
         const {params:{id}}=req
@@ -97,9 +125,27 @@ const deleteProveedor = async(req,res,next)=>{
     }
 }
 
+const deleteByCedula = async (req, res, next) => {
+  try {
+    const { params: { cedula }} = req
+    const data = await ProveedorService.removeByCedula(cedula)
+
+    res.status(200).json({
+      message: 'Deleted',
+      data
+    })
+  } catch (error) {
+    next(error)
+  }
+} 
+
 module.exports = {
     findAllProveedores,
     createProveedor,
     findOneProveedor,
-    deleteProveedor
+    deleteProveedor,
+    validar,
+    updateProveedor,
+    deleteByCedula,
+    
 }
